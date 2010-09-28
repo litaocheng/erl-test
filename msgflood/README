@@ -1,0 +1,5 @@
+测试节点之间消息发送的速度
+启动server: ./server.sh
+启动client: ./client.sh
+
+在client中，点击回车结束测试，同时server自动停止.

@@ -1,0 +1,2 @@
+-define(PORT, 1981).
+-define(P(F, D), io:format(F, D)).

@@ -1,0 +1,62 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -smp disable +A 16
+-mode(compile).
+
+main(["ets", NStr]) ->
+    N = list_to_integer(NStr),
+    [erlang:garbage_collect(P) || P <- processes()],
+    Mem1 = erlang:memory(ets),
+    T1 = now(),
+    number_tab = ets:new(number_tab, [named_table, set, public, {keypos, 1}]),
+    [ets:insert(number_tab, {I, I*I}) || I <- lists:seq(1, N)],
+    T2 = now(),
+    Mem2 = erlang:memory(ets),
+    io:format("use time:~p(us)~n", [timer:now_diff(T2, T1)]),
+    io:format("memory increase:~p(bytes)~n", [Mem2 - Mem1]),
+    io:format("table info:~p~n", [ets:info(number_tab)]),
+    ok;
+
+main(["list", NStr]) ->
+    N = list_to_integer(NStr),
+    [erlang:garbage_collect(P) || P <- processes()],
+    Mem1 = erlang:memory(total),
+    T1 = now(),
+    List = [{I, I*I} || I <- lists:seq(1, N)],
+    T2 = now(),
+    Mem2 = erlang:memory(total),
+    io:format("use time:~p(us)~n", [timer:now_diff(T2, T1)]),
+    io:format("memory increase:~p(bytes)~n", [Mem2 - Mem1]),
+    io:format("list size:~p~n", [length(List)]),
+    ok;
+
+main(["dets", NStr]) ->
+    N = list_to_integer(NStr),
+    [erlang:garbage_collect(P) || P <- processes()],
+    Mem1 = erlang:memory(total),
+    T1 = now(),
+    {ok, _} = dets:open_file(number_dets_tab, [{access, read_write}, {keypos, 1}]),
+    [dets:insert(number_dets_tab, {I, I*I}) || I <- lists:seq(1, N)],
+    T2 = now(),
+    Mem2 = erlang:memory(total),
+    io:format("use time:~p(us)~n", [timer:now_diff(T2, T1)]),
+    io:format("memory increase:~p(bytes)~n", [Mem2 - Mem1]),
+    ok;
+
+main(["dict", NStr]) ->
+    N = list_to_integer(NStr),
+    [erlang:garbage_collect(P) || P <- processes()],
+    Mem1 = erlang:memory(total),
+    T1 = now(),
+    Dict = 
+    lists:foldl(
+        fun(I, Acc) ->
+            dict:store(I, I*I, Acc)
+        end,
+    dict:new(), lists:seq(1, N)),
+    T2 = now(),
+    Mem2 = erlang:memory(total),
+    io:format("use time:~p(us)~n", [timer:now_diff(T2, T1)]),
+    io:format("memory increase:~p(bytes)~n", [Mem2 - Mem1]),
+    io:format("dict size:~p~n", [dict:size(Dict)]),
+    ok.
