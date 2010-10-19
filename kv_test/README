@@ -1,0 +1,10 @@
+测试相关数据结构的插入，查询消耗。
+选出各个数据规模下性能较好的方法。
+主要包括:
+list (stdlib)
+dict (stdlib)
+orddict (stdlib)
+gb_trees (stdlib)
+ets
+process dictionary
+

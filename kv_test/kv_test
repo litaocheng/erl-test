@@ -1,0 +1,6 @@
+#! /bin/bash
+if ! erlc kv_test.erl; then
+    exit 1
+fi
+#echo "args  $@"
+erl +K true -noshell -smp enable -run kv_test run -s erlang halt -extra $@  

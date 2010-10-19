@@ -7,7 +7,7 @@
 -define(RECV_TIMEOUT, 100).
 
 run() ->
-    N = 10000,
+    N = 100000,
     C = 200,
     Per = N div C,
     Server = ?SERVER,
