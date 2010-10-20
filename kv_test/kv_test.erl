@@ -3,7 +3,7 @@
 
 -record(args, {
         n = 10000,  % 总数
-        s = 1000    % 步长
+        s = 5000    % 步长
     }).
 
 %% 帮助信息
@@ -13,7 +13,11 @@ help() ->
     "kv_test [Options]\n"
     " -h    print this help information\n"
     " -n    the max data size volume\n"
-    " -s    the test run step\n"),
+    " -s    the test run step\n"
+    "说明:\n"
+    "I表示插入,L表示查询\n"
+    "memp表示所在进程内存变化，memt表示节点内存变化\n"),
+
     init:stop(1).
 
 run() ->
@@ -42,10 +46,17 @@ args_valid(#args{n = N, s = S})
 args_valid(_) ->
     false.
 
+%% 打印标题
+print_title(N) ->
+    io:format("\nN=~p\t~30s\t~30s\n", [N, "insert", "lookup"]),
+    io:format("~12s\t|time~10s\tmemp\tmemt|\ttime\tspeed\tmemp\tmemt~n", 
+        ["type", "speed"]),
+    io:format("~80..-s\n", ["-"]).
+
 %% 打印统计结果
 print_stats(Type, N, [{insert, TI, MPI, MTI}, {lookup, TL, MPL, MTL}]) ->
-    io:format("~12s\t~p\t~p\t~p\t~p\t~p\t~p\t~p~n",
-        [Type, N, TI, MPI, MTI, TL, MPL, MTL]).
+    io:format("~12s\t~p\t~p\t~p\t~p\t~p\t~p\t~p\t~p~n",
+        [Type, TI, N * 1000000 div TI, MPI, MTI, TL, N * 1000000 div TL,MPL, MTL]).
 
 %% 执行操作
 do_all(#args{n = N, s = S}) ->
@@ -72,8 +83,7 @@ do_all(#args{n = N, s = S}) ->
 do_run(N) ->
     erlang:process_flag(trap_exit, true),
     Pid = spawn_link(fun worker/0),
-    io:format("~n~12s\tN\ttime(I)\tmemp(I)\tmemt(I)\ttime(L)\tmemp(L)\tmemt(L)~n", ["type"]),
-    io:format("~75..-s\n", ["-"]),
+    print_title(N),
     do_test_type(Pid, list, list_test(), [], N),
     %do_test_type(Pid, orddict, orddict_test(), orddict:new(), N),
     do_test_type(Pid, gtrees, gb_trees_test(), gb_trees:empty(), N),
