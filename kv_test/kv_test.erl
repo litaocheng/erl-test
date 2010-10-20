@@ -44,7 +44,7 @@ args_valid(_) ->
 
 %% 打印统计结果
 print_stats(Type, N, [{insert, TI, MPI, MTI}, {lookup, TL, MPL, MTL}]) ->
-    io:format("~p\t~p\t~p\t~p\t~p\t~p\t~p\t~p~n",
+    io:format("~12s\t~p\t~p\t~p\t~p\t~p\t~p\t~p~n",
         [Type, N, TI, MPI, MTI, TL, MPL, MTL]).
 
 %% 执行操作
@@ -72,11 +72,14 @@ do_all(#args{n = N, s = S}) ->
 do_run(N) ->
     erlang:process_flag(trap_exit, true),
     Pid = spawn_link(fun worker/0),
-    io:format("type\tN\ttime(I)\tmemp(I)\tmemt(I)\ttime(L)\tmemp(L)\tmemt(L)~n"),
+    io:format("~n~12s\tN\ttime(I)\tmemp(I)\tmemt(I)\ttime(L)\tmemp(L)\tmemt(L)~n", ["type"]),
+    io:format("~75..-s\n", ["-"]),
     do_test_type(Pid, list, list_test(), [], N),
-    do_test_type(Pid, dict, dict_test(), dict:new(), N),
     %do_test_type(Pid, orddict, orddict_test(), orddict:new(), N),
     do_test_type(Pid, gtrees, gb_trees_test(), gb_trees:empty(), N),
+    do_test_type(Pid, dict, dict_test(), dict:new(), N),
+    do_test_type(Pid, mnesia, mnesia_trans_test(), mnesia_trans_init(N), N),
+    do_test_type(Pid, 'mnesia(N)', mnesia_non_trans_test(), mnesia_non_trans_init(N), N),
     do_test_type(Pid, ets, ets_test(), ets_init(), N),
     do_test_type(Pid, pdict, proc_dict_test(), null, N).
 
@@ -116,6 +119,51 @@ ets_init() ->
 ets_test() ->
     {fun(I, Tid) -> ets:insert(Tid, {I, I}), Tid end,
         fun(I, Tid) -> [{I, I}] = ets:lookup(Tid, I) end}.
+
+%% mnesia 操作
+-record(mnesia_kv_test, {
+        key,
+        value}).
+
+mnesia_trans_init(N) ->
+    mnesia:start(),
+    Tab = list_to_atom(lists:concat(["mnesia_kv_trans", N])),
+    {atomic, ok} = mnesia:create_table(Tab, [{ram_copies, [node()]}, {type, set},
+            {record_name, mnesia_kv_test},
+            {attributes, record_info(fields, mnesia_kv_test)}]),
+    Tab.
+mnesia_trans_test() ->
+    {fun(I, Tab) -> 
+            F =
+            fun() ->
+                    ok = mnesia:write(Tab, #mnesia_kv_test{key = I, value = I}, write)
+            end,
+            {atomic, ok} = mnesia:transaction(F),
+            Tab
+    end,
+    fun(I, Tab) -> 
+            F =
+            fun() ->
+                    mnesia:dirty_read({Tab, I})
+            end,
+            {atomic, [#mnesia_kv_test{}]} = mnesia:transaction(F)
+    end}.
+
+mnesia_non_trans_init(N) ->
+    mnesia:start(),
+    Tab = list_to_atom(lists:concat(["mnesia_kv_non_trans", N])),
+    {atomic, ok} = mnesia:create_table(Tab, [{ram_copies, [node()]}, {type, set},
+            {record_name, mnesia_kv_test},
+            {attributes, record_info(fields, mnesia_kv_test)}]),
+    Tab.
+mnesia_non_trans_test() ->
+    {fun(I, Tab) -> 
+            ok = mnesia:dirty_write(Tab, #mnesia_kv_test{key = I, value = I}),
+            Tab
+    end,
+    fun(I, Tab) -> 
+            [#mnesia_kv_test{}] = mnesia:dirty_read({Tab, I})
+    end}.
 
 %% Process dictionary 操作
 proc_dict_test() ->
