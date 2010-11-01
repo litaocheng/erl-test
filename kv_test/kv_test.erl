@@ -49,13 +49,13 @@ args_valid(_) ->
 %% 打印标题
 print_title(N) ->
     io:format("\nN=~p\t~30s\t~30s\n", [N, "insert", "lookup"]),
-    io:format("~12s\t|time~10s\tmemp\tmemt|\ttime\tspeed\tmemp\tmemt~n", 
+    io:format("~12s\t\ttime~10s\tmemp\tmemt\t\ttime\tspeed\tmemp\tmemt~n", 
         ["type", "speed"]),
-    io:format("~80..-s\n", ["-"]).
+    io:format("~95..-s\n", ["-"]).
 
 %% 打印统计结果
 print_stats(Type, N, [{insert, TI, MPI, MTI}, {lookup, TL, MPL, MTL}]) ->
-    io:format("~12s\t~p\t~p\t~p\t~p\t~p\t~p\t~p\t~p~n",
+    io:format("~12s\t\t~p\t~p\t~p\t~p\t\t~p\t~p\t~p\t~p~n",
         [Type, TI, N * 1000000 div TI, MPI, MTI, TL, N * 1000000 div TL,MPL, MTL]).
 
 %% 执行操作

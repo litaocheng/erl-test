@@ -3,12 +3,11 @@
 -export([run/0]).
 
 -include("tcp_test.hrl").
--define(SERVER, "127.0.0.1").
 -define(RECV_TIMEOUT, 100).
 
 run() ->
-    N = 100000,
-    C = 200,
+    N = 10,
+    C = 2,
     Per = N div C,
     Server = ?SERVER,
     _ = erlang:statistics(runtime),
@@ -57,7 +56,7 @@ random_init() ->
     random:seed(A, B, C).
 
 connect_server(Server) ->
-    case gen_tcp:connect(Server, ?PORT, [binary, {packet, 2}, {active, false}]) of
+    case gen_tcp:connect(Server, ?PORT, [binary, {packet, 0}, {active, false}]) of
         {ok, S} ->
             {ok, S};
         {error, R} ->
@@ -69,14 +68,14 @@ client_loop(Sock, 0, Acc) ->
     {ok, Acc};
 client_loop(Sock, N, {Statify, Timeout}) ->
     T1 = now(),
-    ok = gen_tcp:send(Sock, <<"get">>),
+    ok = gen_tcp:send(Sock, <<"<pol>">>),
     case gen_tcp:recv(Sock, 0, ?RECV_TIMEOUT) of
         {error, timeout} ->
             %?P("recv data timeout!~n", []),
             client_loop(Sock, N - 1, {Statify, Timeout + 1});
         {ok, Packet} ->
             T2 = now(),
-            %?P("recv ~p~n", [Packet]),
+            ?P("recv ~p~n", [Packet]),
             timer:sleep(10),
             client_loop(Sock, N - 1, {[timer:now_diff(T2, T1) | Statify], Timeout});
         {error, closed} ->

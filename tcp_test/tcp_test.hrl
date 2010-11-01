@@ -1,2 +1,3 @@
--define(PORT, 1981).
+-define(SERVER, "127.0.0.1").
+-define(PORT, 7100).
 -define(P(F, D), io:format(F, D)).

@@ -1,0 +1,6 @@
+#! /bin/bash
+if ! erlc *.erl; then
+    exit 1
+fi
+#echo "args  $@"
+erl +K true -noshell -smp enable  -mnesia dump_log_write_threshold  80000 -run mnesia_test run -s erlang halt -extra $@  
