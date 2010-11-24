@@ -91,7 +91,8 @@ do_run(N) ->
     do_test_type(Pid, mnesia, mnesia_trans_test(), mnesia_trans_init(N), N),
     do_test_type(Pid, 'mnesia(N)', mnesia_non_trans_test(), mnesia_non_trans_init(N), N),
     do_test_type(Pid, ets, ets_test(), ets_init(), N),
-    do_test_type(Pid, pdict, proc_dict_test(), null, N).
+    do_test_type(Pid, pdict, proc_dict_test(), null, N),
+    do_test_type(Pid, fmatch, fun_match_test(), fun_match_init(N), N).
 
 do_test_type(Pid, Type, Funs, Opaque, N) ->
     Pid ! {Funs, Opaque, N},
@@ -125,7 +126,7 @@ gb_trees_test() ->
 
 %% ets 操作
 ets_init() ->
-    ets:new(ets_kv_test, [set, public, {keypos, 1}]).
+    ets:new(ets_kv_test, [set, public, {keypos, 1}, {read_concurrency, true}]).
 ets_test() ->
     {fun(I, Tid) -> ets:insert(Tid, {I, I}), Tid end,
         fun(I, Tid) -> [{I, I}] = ets:lookup(Tid, I) end}.
@@ -179,6 +180,35 @@ mnesia_non_trans_test() ->
 proc_dict_test() ->
     {fun(I, _) -> put(I, I) end,
         fun(I, _) -> I = get(I) end}.
+
+
+fun_match_init(N) ->
+    Mod = kv_test_fun,
+    Def =
+    io_lib:format(
+    "-module(~w).\n"
+    "-compile([export_all]).\n\n",
+    [Mod]),
+
+    Body = 
+    [begin
+        io_lib:format(
+        "get(~p) ->\n"
+        "   ~p;\n",
+        [I, I])
+    end || I <- lists:seq(1, N)],
+
+    LastClause = "get(_) -> throw(unknown_key).\n",
+
+    FileName = lists:concat([Mod, ".erl"]),
+    ok = file:write_file(FileName, [Def,Body, LastClause]),
+    compile:file(FileName).
+
+
+%% 采用函数匹配操作
+fun_match_test() ->
+    {fun(_I, _) -> ok end,
+        fun(I, _) -> kv_test_fun:get(I) end}.
 
 %%-----------------------------------------------------------------
 
