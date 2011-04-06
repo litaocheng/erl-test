@@ -267,7 +267,7 @@ random_person(N) ->
         sex = random:uniform(2), 
         age = random:uniform(100),
         score = random:uniform(750),
-        desc = lists:concat(["my name is name_", N])
+        desc = lists:concat(["hello, do you knonw my name?????????????????/ my name is name_", N])
     }.
 
 %% 显示信息
