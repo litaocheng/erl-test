@@ -14,8 +14,8 @@ echo "start the msg flood server"
 COOKIE=flood
 OPTS="-smp auto +K true +h 99999 \
       -kernel inet_default_connect_options \
-        [{nodelay,false},{recbuf,102400},{sndbuf,1024000}] \
+        [{nodelay,false},{recbuf,1024000},{sndbuf,10240000}] \
       -kernel inet_default_listen_options \
-        [{nodelay,false},{recbuf,102400},{sndbuf,1024000}]"
+        [{nodelay,false},{recbuf,1024000},{sndbuf,10240000}]"
 
 erl $OPTS -setcookie $COOKIE -noshell -name $SRV -eval "msgflood:server(flood)"

@@ -37,7 +37,6 @@ srv_loop(Parent) ->
             Parent ! complete
     end.
 
-
 srv_loop1(N) ->
     receive
         {'EXIT', _, shutdown} ->
@@ -49,11 +48,21 @@ srv_loop1(N) ->
             srv_loop1(N+1)
     end.
 
-%% 启动client
+%% 启动client(节点内)
+client(Server) ->
+    client(none, Server).
+
+%% 启动client(节点间)
 client(Node, Server) ->
-    true = is_alive(),
-    net_kernel:connect_node(Node),
-    Pid = spawn_link(?MODULE, send_loop, [self(), {Server, Node}]),
+    case Node of
+        none ->
+            Dest = Server;
+        _ ->
+            true = is_alive(),
+            true = net_kernel:connect_node(Node),
+            Dest = {Server, Node}
+    end,
+    Pid = spawn_link(?MODULE, send_loop, [self(), Dest]),
     io:get_line("press any key stop..."),
     exit(Pid, shutdown),
     receive

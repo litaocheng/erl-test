@@ -10,7 +10,7 @@ run() ->
     C = 2,
     Per = N div C,
     Server = ?SERVER,
-    _ = erlang:statistics(runtime),
+    Now = now(),
     Procs = [new_client(self(), Server, Per) || _ <- lists:seq(1, C)],
     {Satis0, Timeout} = 
     lists:foldl(
@@ -22,7 +22,7 @@ run() ->
         end,
         {[], 0},
         Procs),
-    {_, T} = erlang:statistics(runtime),
+    T = timer:now_diff(now(), Now),
     {Satis, NotSatis} = 
     lists:partition(
         fun(E) when E =< 10000 ->
@@ -31,7 +31,7 @@ run() ->
                 false
         end,
         lists:flatten(Satis0)),
-    ?P("request count: ~p use time:~p(ms) speed:~p~n", [N, T, N * 1000 div T]),
+    ?P("request count: ~p use time:~p(us) speed:~p/s~n", [N, T, N * 1000000 div T]),
     ?P("timeout: ~p statify: ~p~n", [Timeout + length(NotSatis), length(Satis)]),
     ?P("rsp time(us):~n", []),
     ?P("min:~p max:~p avg:~p~n", [lists:min(Satis),
@@ -45,7 +45,7 @@ new_client(Parent, Server, N) ->
     F = fun() ->
             random_init(),
             {ok, Sock} = connect_server(Server),
-            timer:sleep(random:uniform(1000)),
+            %timer:sleep(random:uniform(1000)),
             {ok, Statics} = client_loop(Sock, N, {[], 0}),
             Parent ! Statics
         end,
@@ -56,7 +56,7 @@ random_init() ->
     random:seed(A, B, C).
 
 connect_server(Server) ->
-    case gen_tcp:connect(Server, ?PORT, [binary, {packet, 0}, {active, false}]) of
+    case gen_tcp:connect(Server, ?PORT, [binary, {packet, 2}, {active, false}]) of
         {ok, S} ->
             {ok, S};
         {error, R} ->
@@ -68,15 +68,15 @@ client_loop(Sock, 0, Acc) ->
     {ok, Acc};
 client_loop(Sock, N, {Statify, Timeout}) ->
     T1 = now(),
-    ok = gen_tcp:send(Sock, <<"<pol>">>),
+    ok = gen_tcp:send(Sock, <<"get">>),
     case gen_tcp:recv(Sock, 0, ?RECV_TIMEOUT) of
         {error, timeout} ->
-            %?P("recv data timeout!~n", []),
+            ?P("recv data timeout!~n", []),
             client_loop(Sock, N - 1, {Statify, Timeout + 1});
         {ok, Packet} ->
             T2 = now(),
-            ?P("recv ~p~n", [Packet]),
-            timer:sleep(10),
+            %?P("recv ~p~n", [Packet]),
+            %timer:sleep(10),
             client_loop(Sock, N - 1, {[timer:now_diff(T2, T1) | Statify], Timeout});
         {error, closed} ->
             ?P("socket closed!~p~n", [Sock]),

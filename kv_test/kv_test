@@ -1,5 +1,5 @@
 #! /bin/bash
-if ! erlc kv_test.erl; then
+if ! erlc kv_test.erl mochiglobal.erl; then
     exit 1
 fi
 #echo "args  $@"

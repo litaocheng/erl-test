@@ -86,12 +86,13 @@ do_run(N) ->
     print_title(N),
     do_test_type(Pid, list, list_test(), [], N),
     %do_test_type(Pid, orddict, orddict_test(), orddict:new(), N),
-    do_test_type(Pid, gtrees, gb_trees_test(), gb_trees:empty(), N),
-    do_test_type(Pid, dict, dict_test(), dict:new(), N),
-    do_test_type(Pid, mnesia, mnesia_trans_test(), mnesia_trans_init(N), N),
+    %do_test_type(Pid, gtrees, gb_trees_test(), gb_trees:empty(), N),
+    %do_test_type(Pid, dict, dict_test(), dict:new(), N),
+    %do_test_type(Pid, mnesia, mnesia_trans_test(), mnesia_trans_init(N), N),
     do_test_type(Pid, 'mnesia(N)', mnesia_non_trans_test(), mnesia_non_trans_init(N), N),
     do_test_type(Pid, ets, ets_test(), ets_init(), N),
     do_test_type(Pid, pdict, proc_dict_test(), null, N),
+    do_test_type(Pid, mochiglobal, mochiglobal_test(), null, N),
     do_test_type(Pid, fmatch, fun_match_test(), fun_match_init(N), N).
 
 do_test_type(Pid, Type, Funs, Opaque, N) ->
@@ -128,8 +129,18 @@ gb_trees_test() ->
 ets_init() ->
     ets:new(ets_kv_test, [set, public, {keypos, 1}, {read_concurrency, true}]).
 ets_test() ->
-    {fun(I, Tid) -> ets:insert(Tid, {I, I}), Tid end,
-        fun(I, Tid) -> [{I, I}] = ets:lookup(Tid, I) end}.
+    {fun(I, Tid) -> ets:insert(Tid, {I, I*I}), Tid end,
+        fun(I, Tid) -> [{I, _}] = ets:lookup(Tid, I) end}.
+
+%% Process dictionary 操作
+proc_dict_test() ->
+    {fun(I, _) -> put(I, I) end,
+        fun(I, _) -> I = get(I) end}.
+
+%% mochiglobal 操作
+mochiglobal_test() ->
+    {fun(I, _) -> mochiglobal:put(I, I) end,
+        fun(I, _) -> I = mochiglobal:get(I) end}.
 
 %% mnesia 操作
 -record(mnesia_kv_test, {
@@ -176,12 +187,6 @@ mnesia_non_trans_test() ->
             [#mnesia_kv_test{}] = mnesia:dirty_read({Tab, I})
     end}.
 
-%% Process dictionary 操作
-proc_dict_test() ->
-    {fun(I, _) -> put(I, I) end,
-        fun(I, _) -> I = get(I) end}.
-
-
 fun_match_init(N) ->
     Mod = kv_test_fun,
     Def =
@@ -204,13 +209,14 @@ fun_match_init(N) ->
     ok = file:write_file(FileName, [Def,Body, LastClause]),
     compile:file(FileName).
 
-
 %% 采用函数匹配操作
 fun_match_test() ->
     {fun(_I, _) -> ok end,
         fun(I, _) -> kv_test_fun:get(I) end}.
 
-%%-----------------------------------------------------------------
+%%-------------
+%% 执行逻辑
+%%-------------
 
 %% 使用一个独立process，首先进行插入，随后进行查询。
 worker() ->
