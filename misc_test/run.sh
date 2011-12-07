@@ -6,5 +6,5 @@ fi
 
 OPTS="-smp auto +K true +h 99999"
 
-erl ${OPTS} -noshell -eval "misc_tests:list_to_atom(1000000), init:stop()"
+erl ${OPTS} -noshell -eval "misc_tests:run(), init:stop()"
 

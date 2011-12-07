@@ -3,21 +3,30 @@
 
 -record(args, {
         n = 10000,  % 总数
-        s = 5000    % 步长
+        s = 5000,   % 步长
+        types = []  % 要测试的类型
     }).
+
+-define(CAN_RUN(N, TYPES, FUN), (case lists:member(N, TYPES) of true -> FUN; false -> ok end)).
 
 %% 帮助信息
 help() ->
     io:format(
-    "kv_test 测试各种key-value的性能\n"
-    "kv_test [Options]\n"
-    " -h    print this help information\n"
-    " -n    the max data size volume\n"
-    " -s    the test run step\n"
-    "说明:\n"
-    "I表示插入,L表示查询\n"
-    "memp表示所在进程内存变化，memt表示节点内存变化\n"),
+"kv_test 测试各种key-value的性能
+kv_test [Options] types
+选项
+ -h    print this help information
+ -n    the max data size volume
+ -s    the test run step
 
+types:
+ all表示所有
+ 1-list 2-orddict 3-gb_tree 4-dict 5-mnesia 6-mnesia(dirty)
+ 7-ets 8-pdict 9-mochiglobal 10-fmatch 11-sets 12-gb_sets 13-ordsets
+
+说明:
+I表示插入,L表示查询
+memp表示所在进程内存变化，memt表示节点内存变化\n"),
     init:stop(1).
 
 run() ->
@@ -33,8 +42,10 @@ run(["-n", NS | Rest], Args) ->
 run(["-s", SS | Rest], Args) ->
     S = list_to_integer(SS),
     run(Rest, Args#args{s = S});
-run([_|Rest], Args) ->
-    run(Rest, Args);
+run(["all"|Rest], Args) ->
+    run(Rest, Args#args{types = lists:seq(1, 13)});
+run([Type|Rest], #args{types = Old} = Args) ->
+    run(Rest, Args#args{types = [list_to_integer(Type) | Old]});
 run([], Args) ->
     args_valid(Args),
     do_all(Args).
@@ -59,7 +70,9 @@ print_stats(Type, N, [{insert, TI, MPI, MTI}, {lookup, TL, MPL, MTL}]) ->
         [Type, TI, N * 1000000 div TI, MPI, MTI, TL, N * 1000000 div TL,MPL, MTL]).
 
 %% 执行操作
-do_all(#args{n = N, s = S}) ->
+do_all(#args{types = []}) ->
+    help();
+do_all(#args{n = N, s = S, types = Types}) ->
     Times = N div S,
     Rem = N rem S,
     L1 = 
@@ -77,23 +90,27 @@ do_all(#args{n = N, s = S}) ->
     end,
     L = lists:reverse(L2),
     io:format("L is ~p~n", [L]),
-    [do_run(I) || I <- L].
+    [do_run(I, Types) || I <- L].
 
         
-do_run(N) ->
+do_run(N, Types) ->
     erlang:process_flag(trap_exit, true),
     Pid = spawn_link(fun worker/0),
     print_title(N),
-    do_test_type(Pid, list, list_test(), [], N),
-    %do_test_type(Pid, orddict, orddict_test(), orddict:new(), N),
-    %do_test_type(Pid, gtrees, gb_trees_test(), gb_trees:empty(), N),
-    %do_test_type(Pid, dict, dict_test(), dict:new(), N),
-    %do_test_type(Pid, mnesia, mnesia_trans_test(), mnesia_trans_init(N), N),
-    do_test_type(Pid, 'mnesia(N)', mnesia_non_trans_test(), mnesia_non_trans_init(N), N),
-    do_test_type(Pid, ets, ets_test(), ets_init(), N),
-    do_test_type(Pid, pdict, proc_dict_test(), null, N),
-    do_test_type(Pid, mochiglobal, mochiglobal_test(), null, N),
-    do_test_type(Pid, fmatch, fun_match_test(), fun_match_init(N), N).
+    ?CAN_RUN(1, Types, do_test_type(Pid, list, list_test(), [], N)),
+    ?CAN_RUN(2, Types, do_test_type(Pid, orddict, orddict_test(), orddict:new(), N)),
+    ?CAN_RUN(3, Types, do_test_type(Pid, gtrees, gb_trees_test(), gb_trees:empty(), N)),
+    ?CAN_RUN(4, Types, do_test_type(Pid, dict, dict_test(), dict:new(), N)),
+    ?CAN_RUN(5, Types, do_test_type(Pid, mnesia, mnesia_trans_test(), mnesia_trans_init(N), N)),
+    ?CAN_RUN(6, Types, do_test_type(Pid, 'mnesia(N)', mnesia_non_trans_test(), mnesia_non_trans_init(N), N)),
+    ?CAN_RUN(7, Types, do_test_type(Pid, ets, ets_test(), ets_init(), N)),
+    ?CAN_RUN(8, Types, do_test_type(Pid, pdict, proc_dict_test(), null, N)),
+    ?CAN_RUN(9, Types, do_test_type(Pid, mochiglobal, mochiglobal_test(), null, N)),
+    ?CAN_RUN(10, Types, do_test_type(Pid, fmatch, fun_match_test(), fun_match_init(N), N)),
+    ?CAN_RUN(11, Types, do_test_type(Pid, sets, sets_test(), sets:new(), N)),
+    ?CAN_RUN(12, Types, do_test_type(Pid, gb_sets, gb_sets_test(), gb_sets:new(), N)),
+    ?CAN_RUN(13, Types, do_test_type(Pid, ordsets, ordsets_test(), ordsets:new(), N)),
+    ok.
 
 do_test_type(Pid, Type, Funs, Opaque, N) ->
     Pid ! {Funs, Opaque, N},
@@ -104,7 +121,6 @@ do_test_type(Pid, Type, Funs, Opaque, N) ->
             io:format("the worker pid run error!~n")
     end.
 
-%%-----------------------------------------------------------------
 %% 列表操作
 list_test() ->
     {fun(I, List) -> [{I, I} | List] end,
@@ -213,6 +229,22 @@ fun_match_init(N) ->
 fun_match_test() ->
     {fun(_I, _) -> ok end,
         fun(I, _) -> kv_test_fun:get(I) end}.
+
+
+%% 测试sets
+sets_test() ->
+    {fun(I, Sets) -> sets:add_element(I, Sets) end,
+        fun(I, Sets) -> true = sets:is_element(I, Sets) end}.
+
+%% 测试gb_sets
+gb_sets_test() ->
+    {fun(I, Sets) -> gb_sets:add_element(I, Sets) end,
+        fun(I, Sets) -> true = gb_sets:is_element(I, Sets) end}.
+
+%% 测试ordsets
+ordsets_test() ->
+    {fun(I, Sets) -> ordsets:add_element(I, Sets) end,
+        fun(I, Sets) -> true = ordsets:is_element(I, Sets) end}.
 
 %%-------------
 %% 执行逻辑
