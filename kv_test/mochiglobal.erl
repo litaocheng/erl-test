@@ -49,7 +49,7 @@ key_to_module(K) ->
 -spec compile(atom(), any()) -> binary().
 compile(Module, T) ->
     {ok, Module, Bin} = compile:forms(forms(Module, T),
-                                      [verbose, report_errors]),
+                                      [native, verbose, report_errors]),
     Bin.
 
 -spec forms(atom(), any()) -> [erl_syntax:syntaxTree()].

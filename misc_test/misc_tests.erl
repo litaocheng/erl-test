@@ -5,9 +5,8 @@ run() ->
     div_vs_bsr(),
     list_2_atom(),
     test_now(),
+    test_timer(),
     test_ets_lookup(),
-    test_sets(),
-    test_gb_sets(),
     ok.
 
 %% div or bsr
@@ -21,6 +20,11 @@ test_now() ->
     do_run("now", 100000, fun(_N) -> erlang:now() end),
     ok.
 
+%% timer
+test_timer() ->
+    do_run("start_timer", 100000, fun(N) -> erlang:start_timer(N, self(), hello) end),
+    ok.
+
 %% test_ets_lookup
 test_ets_lookup() ->
     Tid = ets:new(dummy, [set, public, {read_concurrency, true}]),
@@ -30,12 +34,6 @@ test_ets_lookup() ->
     ets:insert(Tid, {now_sec, A * 10000000 + B}),
     do_run("ets_lookup", 100000, fun(_N) -> [_] = ets:lookup(Tid, now) end),
     ok.
-
-%% test sets
-test_sets() ->
-    Set = sets:new(),
-    do_run("test_sets", 100000, fun(N) ->
-
 
 %%
 list_2_atom() ->

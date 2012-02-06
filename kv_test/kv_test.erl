@@ -255,8 +255,9 @@ worker() ->
     receive
         {{FunInsert, FunLookup}, Opaque, N} ->
             erase(),
-            erlang:garbage_collect(),
+            erlang:garbage_collect(self()),
             {Opaque2, S1} = do_insert(FunInsert, Opaque, N),
+            erlang:garbage_collect(self()),
             S2 = do_lookup(FunLookup, Opaque2, N),
             {links, [Parent]} = erlang:process_info(self(), links),
             Parent ! {self(), [S1, S2]},
