@@ -214,21 +214,24 @@ fun_match_init(N) ->
     Body = 
     [begin
         io_lib:format(
-        "get(~p) ->\n"
+        "find(~b) ->\n"
         "   ~p;\n",
         [I, I])
     end || I <- lists:seq(1, N)],
 
-    LastClause = "get(_) -> throw(unknown_key).\n",
+    LastClause = "find(_) -> throw(unknown_key).\n",
 
     FileName = lists:concat([Mod, ".erl"]),
     ok = file:write_file(FileName, [Def,Body, LastClause]),
-    compile:file(FileName).
+    {ok, Mod} = compile:file(FileName),
+    Mod:module_info(),
+    ok.
+
 
 %% 采用函数匹配操作
 fun_match_test() ->
     {fun(_I, _) -> ok end,
-        fun(I, _) -> kv_test_fun:get(I) end}.
+        fun(I, _) -> kv_test_fun:find(I) end}.
 
 
 %% 测试sets

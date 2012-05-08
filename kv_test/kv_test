@@ -4,3 +4,4 @@ if ! erlc kv_test.erl mochiglobal.erl; then
 fi
 #echo "args  $@"
 erl +K true -noshell -smp enable -run kv_test run -s erlang halt -extra $@  
+rm -rf *.beam *.dump

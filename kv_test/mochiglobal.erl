@@ -44,7 +44,7 @@ delete(_K, Mod) ->
 
 -spec key_to_module(atom()) -> atom().
 key_to_module(K) ->
-    list_to_atom(lists:concat(["mochiglobal:", K])).
+    list_to_atom(lists:concat(["mg:", K])).
 
 -spec compile(atom(), any()) -> binary().
 compile(Module, T) ->

@@ -7,6 +7,8 @@ run() ->
     test_now(),
     test_timer(),
     test_ets_lookup(),
+    %test_rand(),
+    test_binary_at(),
     ok.
 
 %% div or bsr
@@ -18,6 +20,19 @@ div_vs_bsr() ->
 %% now
 test_now() ->
     do_run("now", 100000, fun(_N) -> erlang:now() end),
+    ok.
+
+%% random
+test_rand() ->
+    crypto:start(),
+    do_run("random", 100000, fun(_) -> random:uniform(10000) end),
+    do_run("crypto", 100000, fun(_) -> crypto:rand_uniform(1, 10000) end),
+    ok.
+
+%% binary:at
+test_binary_at() ->
+    Bin = <<1:102400/unit:8>>,
+    do_run("binary_at", 100000, fun(N) -> binary:at(Bin, N) end),
     ok.
 
 %% timer
